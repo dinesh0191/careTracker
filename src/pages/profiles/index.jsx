@@ -1,140 +1,172 @@
 import React, { useState, useEffect } from "react";
-import CommonCard from "../../components/common/card";
-import TextInput from "../../components/common/input";
-import OrangeButton from "../../components/common/button/index";
-import User from "../user";
-import secureAxios from "../../services/http";
-import {
-  UserAddOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  SearchOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  QrcodeOutlined,
-} from "@ant-design/icons";
+import { useDispatch, useSelector } from "react-redux";
+import { UserAddOutlined, SearchOutlined } from "@ant-design/icons";
+import { getProfiles, getUser } from "redux/userActions";
+import { defaultImage, toTitleCase } from "constants/constant";
+import AddProfile from "./addProfile";
+import AddReports from "./addReports";
+import ViewReports from "./viewReport";
+import ViewProfile from "./viewProfile";
+import CommonCard from "common/card";
+import TextInput from "common/input";
+import PreLoader from "common/loader";
 import "./index.scss";
 
-const Profiles = ({ token }) => {
+const Profiles = () => {
+  const dispatch = useDispatch();
+  const { userProfiles, loading, token } = useSelector(
+    (state) => state.userReducer
+  );
   const [addProfile, setAddProfile] = useState(false);
-  const [allProfiles, setAllProfiles] = useState([]);
-  const [profile, setProfile] = useState({});
+  const [editProfile, setEditProfile] = useState(false);
+  const [requestDisease, setRequestDisease] = useState(false);
+  const [addReports, setAddReports] = useState(false);
+  const [viewReports, setViewReports] = useState(false);
+  const [query, setQuery] = useState("");
+  const [profileList, setProfileList] = useState("");
+  const [profile, setProfile] = useState(userProfiles[0]);
 
   const closeProfile = () => {
     setAddProfile(false);
+    setRequestDisease(false);
+    setEditProfile(false);
+    setAddReports(false);
+    setViewReports(false);
+  };
+
+  const openRequest = () => {
+    setRequestDisease(true);
+  };
+  const closeRequest = () => {
+    setRequestDisease(false);
   };
 
   const viewProfile = (id) => {
-    allProfiles.forEach((item) => {
+    userProfiles.forEach((item) => {
       if (item._id === id) {
         setProfile(item);
       }
     });
   };
 
-  const getData = async () => {
-    const token = sessionStorage.getItem("user");
-    secureAxios
-      .post("/get_profile_list", { access_token: token })
-      .then((res) => {
-        setAllProfiles(res?.data?.data);
-      })
-      .catch((err) => {
-        throw err;
+  const updateInput = (input) => {
+    if (userProfiles) {
+      const filtered = userProfiles.filter((item) => {
+        return item.profile_details.name
+          .toLowerCase()
+          .includes(input.toLowerCase());
       });
+      setQuery(input);
+      setProfileList(filtered);
+    }
   };
 
   useEffect(() => {
-    getData();
-    return () => null;
-  }, []);
+    dispatch(getUser(token));
+    dispatch(getProfiles(token));
+  }, []); //eslint-disable-line
+
+  const profiles = profileList ? profileList : userProfiles;
 
   return (
-    <div className="profiles">
-      <CommonCard>
-        <div className="main-content">
-          <div className="top-section">
-            <div className="search-bar">
-              <TextInput placeholder="Search profile..." />
-              <SearchOutlined />
-            </div>
-            <div className="icons">
-              <FileAddOutlined />
-              <UserAddOutlined onClick={() => setAddProfile(true)} />
-              <FileTextOutlined />
-            </div>
-          </div>
-          <div className="profile-content">
-            {allProfiles &&
-              allProfiles.map((item) => (
-                <div
-                  className={
-                    item.profile_details.name === profile?.profile_details?.name
-                      ? "profile-section active"
-                      : "profile-section"
-                  }
-                  key={item._id}
-                  onClick={() => viewProfile(item._id)}
-                >
-                  <img
-                    src="https://cvbay.com/wp-content/uploads/2017/03/dummy-image.jpg"
-                    alt="member"
-                  />
-                  <div className="info">
-                    <p>Name - Mr. {item?.profile_details?.name}</p>
-                    <p>Age - {item?.profile_details?.age} years</p>
-                    <p>Gender - Male</p>
-                  </div>
-                </div>
-              ))}
-          </div>
+    <>
+      {loading ? (
+        <div className="loading">
+          <CommonCard>
+            <PreLoader />
+          </CommonCard>
         </div>
-      </CommonCard>
-      <CommonCard>
-        <div className="profile-detail">
-          <div className="profile-icons">
-            <FileAddOutlined />
-            <EditOutlined />
-            <DeleteOutlined />
-          </div>
-          {profile && (
-            <div className="details">
-              <img
-                src="https://cvbay.com/wp-content/uploads/2017/03/dummy-image.jpg"
-                alt="detail"
+      ) : (
+        <div className="profiles">
+          <CommonCard>
+            <div className="main-content">
+              <div className="top-section">
+                <div className="search-bar">
+                  <TextInput
+                    placeholder="Search profile..."
+                    value={query}
+                    change={(e) => updateInput(e.target.value)}
+                  />
+                  <SearchOutlined />
+                </div>
+                <div className="icons">
+                  <UserAddOutlined onClick={() => setAddProfile(true)} />
+                </div>
+              </div>
+              <div className="profile-content">
+                {userProfiles.length > 0 &&
+                  profiles.map((item) => {
+                    const { name, age, gender } = item.profile_details;
+                    const image = item.profile_photo;
+                    return (
+                      <div
+                        className={
+                          name === profile?.profile_details?.name
+                            ? "profile-section active"
+                            : "profile-section"
+                        }
+                        key={item._id}
+                        onClick={() => viewProfile(item._id)}
+                      >
+                        <img src={image ? image : defaultImage} alt="member" />
+                        <div className="info">
+                          <p>
+                            Name - {gender === "male" ? "Mr." : "Miss"}{" "}
+                            {toTitleCase(name)}
+                          </p>
+                          <p>Age - {age} years</p>
+                          <p>Gender - {toTitleCase(gender)}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </CommonCard>
+          <CommonCard>
+            {profile && Object.keys(profile).length > 0 && (
+              <ViewProfile
+                profile={profile}
+                setProfile={setProfile}
+                setAddReports={setAddReports}
+                setEditProfile={setEditProfile}
+                setViewReports={setViewReports}
+                userProfiles={userProfiles}
               />
-              <div className="user-info">
-                <p>Name - {profile?.profile_details?.name}</p>
-                <p>Age - {profile?.profile_details?.age} years</p>
-                <p>Gender - Male</p>
-                <p>Blood group - {profile?.profile_details?.blood_group}</p>
-                <p>Diseases - {profile?.profile_details?.gender}</p>
-              </div>
-              <div className="qr-code">
-                <QrcodeOutlined />
-              </div>
-              <OrangeButton text="Download" type="orange-button" />
+            )}
+          </CommonCard>
+          {addProfile && (
+            <div className="profile-dialog">
+              <AddProfile
+                addProfile={addProfile}
+                closeProfile={closeProfile}
+                token={token}
+                requestDisease={requestDisease}
+                closeRequest={closeRequest}
+                openRequest={openRequest}
+              />
             </div>
           )}
+          {editProfile && (
+            <div className="profile-dialog">
+              <AddProfile
+                closeProfile={closeProfile}
+                profile={profile}
+                editProfile={editProfile}
+                addProfile={addProfile}
+              />
+            </div>
+          )}
+          {addReports && (
+            <AddReports closeProfile={closeProfile} profile={profile} />
+          )}
+          {viewReports && (
+            <ViewReports closeProfile={closeProfile} profile={profile} />
+          )}
         </div>
-      </CommonCard>
-      {addProfile && (
-        <ProfileDialog
-          addProfile={addProfile}
-          closeProfile={closeProfile}
-          token={token}
-        />
       )}
-    </div>
+    </>
   );
 };
 
 export default Profiles;
-
-const ProfileDialog = ({ addProfile, closeProfile, token }) => {
-  return (
-    <div className="profile-dialog">
-      <User addProfile={addProfile} closeProfile={closeProfile} token={token} />
-    </div>
-  );
-};

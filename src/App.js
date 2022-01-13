@@ -1,77 +1,149 @@
-import React, { useState } from "react";
-import Login from "./auth/Login";
-import Header from "./components/Header/Header";
-import Sidebar from "./components/Sidebar/Sidebar";
-import User from "./pages/user";
-import Dashboard from "./pages/dashboard";
-import Profiles from "./pages/profiles";
-import Doctors from "./pages/doctors";
-import secureAxios from "./services/http";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
-import "./App.scss";
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getUser, getToken, login } from 'redux/userActions';
+import Login from 'auth';
+import Header from 'common/header';
+import Sidebar from 'common/sidebar';
+import CommonCard from 'common/card';
+import PreLoader from 'common/loader';
+import User from 'pages/user';
+import Dashboard from 'pages/dashboard';
+import AdminDashboard from 'pages/adminDashboard';
+import DoctorDashboard from 'pages/doctorDashboard';
+import Profiles from 'pages/profiles';
+import Doctors from 'pages/doctors';
+import Disease from 'pages/disease';
+import DoctorBoarding from 'pages/doctorOnboard';
+import NotFound from 'pages/notFound';
+import Emergency from 'pages/emergency';
+import './App.scss';
 
-function App() {
-  const [isUser, setIsUser] = useState(sessionStorage.getItem("user"));
-  const [user, setUser] = useState({});
-  const [token, setToken] = useState("");
+const App = () => {
+	const dispatch = useDispatch();
+	const { user } = useSelector((state) => state.userReducer);
+	const [isUser, setIsUser] = useState(localStorage.getItem('user'));
+	const [otpLoading, setOtpLoading] = useState(false);
+	const [sidebar, setSidebar] = useState(false);
+	const { user_type } = user?.data || '';
 
-  const checkUser = () => {
-    const auth = getAuth();
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setIsUser(true);
-        setToken(user?.accessToken);
-        sessionStorage.setItem("user", user?.accessToken);
-        secureAxios
-          .post("login", {
-            access_token: user?.accessToken,
-          })
-          .then((resp) => {
-            setUser(resp?.data?.user_details);
-          })
-          .catch((err) => console.log(err));
-      }
-    });
-  };
+	const handleToggleSidebar = () => setSidebar((value) => !value);
 
-  const handleLogout = () => {
-    const auth = getAuth();
-    signOut(auth)
-      .then(() => {
-        sessionStorage.removeItem("user");
-        setIsUser(null);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-  };
+	const checkUser = () => {
+		const auth = getAuth();
+		onAuthStateChanged(auth, (user) => {
+			if (user) {
+				const token = user.accessToken;
+				localStorage.setItem('user', token);
+				dispatch(login(token));
+				dispatch(getToken(token));
+				dispatch(getUser(token));
+				setIsUser(token);
+			}
+		});
+	};
 
-  return (
-    <div className="app">
-      {!isUser ? (
-        <Login checkUser={checkUser} />
-      ) : (
-        <Router>
-          <Header handleLogout={handleLogout} />
-          <Sidebar />
-          <div className="pages">
-            <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profiles" element={<Profiles token={token} />} />
-              <Route path="/doctors" element={<Doctors />} />
-              <Route path="/user" element={<User token={token} />} />
-              {user?.user_status === "new" ? (
-                <Route path="/user" element={<User />} />
-              ) : (
-                <Route path="/dashboard" element={<Dashboard />} />
-              )}
-            </Routes>
-          </div>
-        </Router>
-      )}
-    </div>
-  );
-}
+	const handleLogout = () => {
+		const auth = getAuth();
+		signOut(auth)
+			.then(() => {
+				localStorage.removeItem('user');
+				setIsUser(null);
+				window.location.href = '/';
+			})
+			.catch((error) => {
+				throw error;
+			});
+	};
+
+	return (
+		<div className="app">
+			{!isUser ? (
+				<>
+					<Router>
+						<Routes>
+							<Route
+								path="/emerygencydetails"
+								element={<Emergency />}
+							/>
+							<Route
+								path="/"
+								element={
+									<Login
+										checkUser={checkUser}
+										setLoading={setOtpLoading}
+										loading={otpLoading}
+									/>
+								}
+							/>
+						</Routes>
+					</Router>
+				</>
+			) : (
+				<Router>
+					<Header
+						handleLogout={handleLogout}
+						handleToggleSidebar={handleToggleSidebar}
+					/>
+					<Sidebar userType={user_type} sidebar={sidebar} />
+					<div className="pages">
+						{user_type ? (
+							<Routes>
+								<Route
+									path="/dashboard"
+									element={<Dashboard />}
+								/>
+								<Route
+									path="/admin-dashboard"
+									element={<AdminDashboard />}
+								/>
+								<Route
+									path="/doctor-Dashboard"
+									element={<DoctorDashboard />}
+								/>
+								<Route
+									path="/profiles"
+									element={<Profiles />}
+								/>
+								<Route path="/doctors" element={<Doctors />} />
+								<Route path="/user" element={<User />} />
+								<Route path="/disease" element={<Disease />} />
+								<Route
+									path="/on-boarding"
+									element={<DoctorBoarding />}
+								/>
+								<Route
+									path="/emerygencydetails"
+									element={<Emergency />}
+								/>
+								<Route path="*" element={<NotFound />} />
+								{user_type === 'user' ? (
+									<Route path="/" element={<Dashboard />} />
+								) : user_type === 'admin' ? (
+									<Route
+										path="/"
+										element={<AdminDashboard />}
+									/>
+								) : (
+									<Route
+										path="/"
+										element={<DoctorDashboard />}
+									/>
+								)}
+							</Routes>
+						) : (
+							<div className="loading">
+								<CommonCard>
+									<PreLoader />
+								</CommonCard>
+							</div>
+						)}
+					</div>
+				</Router>
+			)}
+		</div>
+	);
+};
 
 export default App;

@@ -1,162 +1,93 @@
-import React, { useState } from "react";
-import OrangeButton from "../../components/common/button";
-import CommonCard from "../../components/common/card";
-import TextInput from "../../components/common/input";
-import secureAxios from "../../services/http";
-import axios from "axios";
-import { CloseOutlined } from "@ant-design/icons";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { getUser } from "redux/userActions";
+import { commonUtil } from "util/commonUtils";
+import { showMessage, warnMessage } from "constants/constant";
+import OrangeButton from "common/button";
+import CommonCard from "common/card";
+import TextInput from "common/input";
+import PreLoader from "common/loader";
 import "./index.scss";
 
-const fileToDataUri = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      resolve(event.target.result);
-    };
-    reader.readAsDataURL(file);
-  });
-
-const User = ({ addProfile, closeProfile }) => {
+const User = () => {
   const history = useNavigate();
-  const [userDetail, setUserDetail] = useState({});
-  const [reports, setReports] = useState("");
+  const dispatch = useDispatch();
+  const { user, loading } = useSelector((state) => state.userReducer);
+  const [detail, setDetail] = useState({});
+  const [load, setLoad] = useState(false);
 
   const handleChange = (node, val) => {
-    let updateDetail = Object.assign({}, userDetail);
-    updateDetail[node] = val;
-    setUserDetail(updateDetail);
+    let updateData = Object.assign({}, detail);
+    updateData[node] = val;
+    setDetail(updateData);
   };
 
-  const onFileChange = (event) => {
-    let files = event.target.files;
-    // const reader = new FileReader();
-    // reader.readAsDataURL(files[0]);
-    // reader.onload = (e) => {
-    //   setReports(e.target.result);
-    // };
-    // setReports(files[0]);
-
-    fileToDataUri(files[0]).then((dataUrl) => {
-      setReports(dataUrl);
-    });
-  };
-
-  const addNewMember = (reports) => {
-    const token = sessionStorage.getItem("user");
+  const handleSave = () => {
+    setLoad(true);
+    const token = localStorage.getItem("user");
 
     const formData = new FormData();
     formData.append("access_token", token);
-    Object.keys(userDetail).forEach((key) =>
-      formData.append(key, userDetail[key])
-    );
-    if (reports) {
-      formData.append("reports", [reports]);
-    }
-    axios({
-      method: "post",
-      url: "https://stark-island-21254.herokuapp.com/create_profile",
-      data: formData,
-      headers: {
-        "content-type":
-          "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW",
-      },
+    Object.keys(detail).forEach((key) => formData.append(key, detail[key]));
+
+    commonUtil("/updateAccountDetails", formData).then((res) => {
+      if (res.data.status) {
+        showMessage("Details updated");
+        setLoad(false);
+        history("/profiles");
+      } else {
+        warnMessage("Network wrror");
+      }
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    let res = await addNewMember(reports);
-    console.log(res.data);
-  };
+  useEffect(() => {
+    const token = localStorage.getItem("user");
+    dispatch(getUser(token));
+  }, []); //eslint-disable-line
 
-  console.log(reports);
+  const { phone_number, user_name: name, user_email: email } = user?.data || "";
+  const { user_name, user_email } = detail || "";
 
   return (
-    <div className="user">
-      <CommonCard>
-        {addProfile && (
-          <div className="close-icon">
-            <CloseOutlined onClick={closeProfile} />
-          </div>
-        )}
-        {/* <div > */}
-        <form
-          onSubmit={handleSubmit}
-          className={addProfile ? "user-content profile" : "user-content"}
-        >
-          <div className="image-section">
-            <img
-              src="https://cvbay.com/wp-content/uploads/2017/03/dummy-image.jpg"
-              alt="detail"
-            />
-            <OrangeButton text="Upload image" type="orange-button" />
-            <label htmlFor="upload-report">Upload reports</label>
-            <input type="file" id="upload-report" onChange={onFileChange} />
-          </div>
-          <div className="form-section">
-            <TextInput
-              placeholder="Name"
-              color="grey"
-              value={userDetail?.name}
-              change={(e) => handleChange("name", e.target.value)}
-            />
-            <TextInput
-              placeholder="Age"
-              color="grey"
-              value={userDetail?.age}
-              change={(e) => handleChange("age", e.target.value)}
-            />
-            {/* <select
-              name="gender"
-              onChange={(e) => handleChange("gender", e.target.value)}
-              defaultValue="gender"
-            >
-              <option value="gender" disabled>
-                Gender
-              </option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-            </select> */}
-            <select
-              name="disease"
-              onChange={(e) => handleChange("disease", e.target.value)}
-              defaultValue="disease"
-            >
-              <option value="disease" disabled>
-                Disease
-              </option>
-              <option value="hypertension">Hypertension</option>
-              <option value="diabetes">Diabetes</option>
-              <option value="cancer">Cancer</option>
-              <option value="other">Other</option>
-            </select>
-            <TextInput
-              placeholder="Blood group"
-              color="grey"
-              value={userDetail?.bloodGroup}
-              change={(e) => handleChange("blood_group", e.target.value)}
-            />
-            <TextInput
-              placeholder="Emergency contact"
-              color="grey"
-              value={userDetail?.emergencyContact}
-              change={(e) => handleChange("emergency_contact", e.target.value)}
-            />
-          </div>
-        </form>
-        {/* </div> */}
-        <div className="save-button">
-          <OrangeButton
-            text="Save"
-            type="orange-button"
-            submit="submit"
-            click={addProfile ? addNewMember : () => history("/dashboard")}
-          />
+    <>
+      {loading ? (
+        <div className="loading">
+          <CommonCard>
+            <PreLoader />
+          </CommonCard>
         </div>
-      </CommonCard>
-    </div>
+      ) : (
+        <div className="user-profile">
+          <CommonCard>
+            <div className="user-details">
+              <TextInput
+                placeholder={name ? name : "Name"}
+                change={(e) => handleChange("user_name", e.target.value)}
+                value={user_name}
+              />
+              <TextInput
+                placeholder={email ? email : "Email"}
+                change={(e) => handleChange("user_email", e.target.value)}
+                value={user_email}
+              />
+              <TextInput
+                placeholder="Mobile"
+                value={phone_number}
+                disabled={true}
+              />
+              <OrangeButton
+                text="Save"
+                type="orange-button"
+                click={handleSave}
+                loading={load}
+              />
+            </div>
+          </CommonCard>
+        </div>
+      )}
+    </>
   );
 };
 

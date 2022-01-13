@@ -42,7 +42,7 @@
           cursor: pointer;
 
           &:hover {
-            opacity: 50%;
+            opacity: 0.5;
           }
         }
       }
@@ -64,7 +64,6 @@
         align-items: center;
         width: 98%;
         height: 100px;
-        background: rgba($color: #c4c4c4, $alpha: 1);
         border-radius: 4px;
         padding: 4px;
         cursor: pointer;
@@ -98,6 +97,9 @@
 
   .profile-detail {
     padding: 20px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
 
     .profile-icons {
       display: flex;
@@ -107,7 +109,7 @@
         cursor: pointer;
 
         &:hover {
-          opacity: 50%;
+          opacity: 0.5;
         }
       }
     }
@@ -135,11 +137,6 @@
 
       .qr-code {
         margin-top: 15%;
-        cursor: pointer;
-
-        &:hover {
-          opacity: 50%;
-        }
         span {
           font-size: 24px;
         }
@@ -150,14 +147,109 @@
     }
   }
   .profile-dialog {
-    z-index: 5;
+    z-index: 10;
     position: fixed;
     width: 100%;
     top: 15%;
     left: 80px;
   }
 }
+.loading {
+  width: 92%;
+}
 
 ::-webkit-scrollbar {
   display: none;
+}
+
+@media (max-width: 940px) {
+  .profiles {
+    width: 92%;
+    grid-template-columns: 70% 25%;
+    p {
+      font-size: 11px !important;
+    }
+
+    .main-content {
+      padding: 20px;
+    }
+    .profile-detail {
+      padding: 10px !important;
+
+      .qr-code,
+      button {
+        margin-top: 15% !important;
+      }
+    }
+  }
+}
+
+@media (max-width: 800px) {
+  .profiles {
+    width: 90%;
+    grid-template-columns: 70% 23%;
+    p {
+      font-size: 10px !important;
+    }
+
+    .main-content {
+      padding: 15px;
+    }
+    .profile-detail {
+      padding: 10px 5px !important;
+
+      button {
+        margin-top: 15% !important;
+        width: 110px;
+      }
+    }
+  }
+}
+
+@media (max-width: 750px) {
+  .profiles {
+    width: 87%;
+    grid-template-columns: 70% 25%;
+    p {
+      font-size: 9px !important;
+    }
+
+    .main-content {
+      padding: 12px;
+      .top-section {
+        .search-bar {
+          width: 60%;
+        }
+      }
+      .profile-content {
+        grid-template-columns: 70%;
+      }
+    }
+    .profile-detail {
+      padding: 10px 3px !important;
+
+      .qr-code,
+      button {
+        margin-top: 30% !important;
+      }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .profiles {
+    width: 94%;
+    grid-template-columns: 98% !important;
+
+    .profile-detail {
+      .qr-code {
+        margin-top: 6% !important;
+      }
+    }
+
+    .profile-dialog {
+      left: 15px;
+      top: 10%;
+    }
+  }
 }
